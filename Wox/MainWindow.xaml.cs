@@ -128,7 +128,7 @@ namespace Wox
                 {
                     if (Visibility == Visibility.Visible)
                     {
-                        Hide();
+                        _viewModel.MainWindowVisibility = Visibility.Collapsed;
                     }
                     else
                     {
