@@ -126,7 +126,7 @@ namespace Wox
             {
                 if (e.Button == MouseButtons.Left)
                 {
-                    if (Visibility == Visibility.Visible)
+                    if (_viewModel.MainWindowVisibility == Visibility.Visible)
                     {
                         _viewModel.MainWindowVisibility = Visibility.Collapsed;
                     }
