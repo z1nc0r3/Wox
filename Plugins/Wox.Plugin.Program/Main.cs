@@ -53,7 +53,6 @@ namespace Wox.Plugin.Program
 
         public List<Result> Query(Query query)
         {
-            Logger.WoxInfo($"trying to query {query.RawQuery}");
             if (_updateSource != null && !_updateSource.IsCancellationRequested)
             {
                 _updateSource.Cancel();
@@ -63,6 +62,7 @@ namespace Wox.Plugin.Program
             var source = new CancellationTokenSource();
             _updateSource = source;
             var token = source.Token;
+            Logger.WoxInfo($"trying to query {query.RawQuery}, token is {token}");
 
             ConcurrentBag<Result> resultRaw = new ConcurrentBag<Result>();
 
@@ -79,6 +79,7 @@ namespace Wox.Plugin.Program
                     }
                 }
             });
+            Logger.WoxInfo($"win32 for {token} done");
             if (token.IsCancellationRequested) { return new List<Result>(); }
             Parallel.ForEach(_uwps, (program, state) =>
             {
@@ -93,9 +94,10 @@ namespace Wox.Plugin.Program
                     }
                 }
             });
-
+            Logger.WoxInfo($"uwp for {token} done");
             if (token.IsCancellationRequested) { return new List<Result>(); }
             OrderedParallelQuery<Result> sorted = resultRaw.AsParallel().OrderByDescending(r => r.Score);
+            Logger.WoxInfo($"sort for {token} done");
             List<Result> results = new List<Result>();
             foreach (Result r in sorted)
             {
@@ -120,6 +122,7 @@ namespace Wox.Plugin.Program
                     break;
                 }
             }
+            Logger.WoxInfo($"filter for {token} done");
             return results;
         }
 
