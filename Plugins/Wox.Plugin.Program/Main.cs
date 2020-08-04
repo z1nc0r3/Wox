@@ -62,42 +62,50 @@ namespace Wox.Plugin.Program
             var source = new CancellationTokenSource();
             _updateSource = source;
             var token = source.Token;
-            Logger.WoxInfo($"trying to query {query.RawQuery}, token is {token}");
+            Logger.WoxInfo($"trying to query {query.RawQuery}, token is {token.GetHashCode()}");
 
             ConcurrentBag<Result> resultRaw = new ConcurrentBag<Result>();
+            var po = new ParallelOptions();
+            po.CancellationToken = source.Token;
 
-            if (token.IsCancellationRequested) { return new List<Result>(); }
-            Parallel.ForEach(_win32s, (program, state) =>
+            try
             {
-                if (token.IsCancellationRequested) { state.Break(); }
-                if (program.Enabled)
+                Parallel.ForEach(_win32s, po, (program) =>
                 {
-                    var r = program.Result(query.Search, _context.API);
-                    if (r != null && r.Score > 0)
+                    po.CancellationToken.ThrowIfCancellationRequested();
+                    if (program.Enabled)
                     {
-                        resultRaw.Add(r);
+                        var r = program.Result(query.Search, _context.API);
+                        if (r != null && r.Score > 0)
+                        {
+                            resultRaw.Add(r);
+                        }
                     }
-                }
-            });
-            Logger.WoxInfo($"win32 for {query.RawQuery} done");
-            if (token.IsCancellationRequested) { return new List<Result>(); }
-            Parallel.ForEach(_uwps, (program, state) =>
+                });
+                Logger.WoxInfo($"win32 for {query.RawQuery} done");
+
+                Parallel.ForEach(_uwps, po, (program, state) =>
+                {
+                    po.CancellationToken.ThrowIfCancellationRequested();
+                    if (program.Enabled)
+                    {
+                        var r = program.Result(query.Search, _context.API);
+                        if (r != null && r.Score > 0)
+                        {
+                            resultRaw.Add(r);
+                        }
+                    }
+                });
+                Logger.WoxInfo($"uwp for {query.RawQuery} done");
+            }
+            catch (OperationCanceledException)
             {
-                if (token.IsCancellationRequested) { state.Break(); }
-                if (program.Enabled)
-                {
-                    var r = program.Result(query.Search, _context.API);
-                    if (token.IsCancellationRequested) { state.Break(); }
-                    if (r != null && r.Score > 0)
-                    {
-                        resultRaw.Add(r);
-                    }
-                }
-            });
-            Logger.WoxInfo($"uwp for {query.RawQuery} done");
-            if (token.IsCancellationRequested) { return new List<Result>(); }
+                Logger.WoxInfo($"win32/uwp for {query.RawQuery} cancelled");
+                return new List<Result>();
+            }
+
             Logger.WoxInfo($"sorting for {query.RawQuery}, count {resultRaw.Count}");
-            OrderedParallelQuery <Result> sorted = resultRaw.AsParallel().WithCancellation(token).OrderByDescending(r => r.Score);
+            OrderedParallelQuery<Result> sorted = resultRaw.AsParallel().WithCancellation(token).OrderByDescending(r => r.Score);
             Logger.WoxInfo($"sort for {query.RawQuery} done");
             List<Result> results = new List<Result>();
             foreach (Result r in sorted)
@@ -194,7 +202,7 @@ namespace Wox.Plugin.Program
                 Logger.WoxDebug($" uwp: <{uwp.DisplayName}> <{uwp.UserModelId}>");
             }
             _settings.LastIndexTime = DateTime.Today;
-            
+
         }
 
         public Control CreateSettingPanel()
