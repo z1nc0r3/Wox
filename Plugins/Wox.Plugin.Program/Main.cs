@@ -53,11 +53,11 @@ namespace Wox.Plugin.Program
 
         public List<Result> Query(Query query)
         {
-
+            Logger.WoxInfo($"trying to query {query.RawQuery}");
             if (_updateSource != null && !_updateSource.IsCancellationRequested)
             {
                 _updateSource.Cancel();
-                Logger.WoxDebug($"cancel init {_updateSource.Token.GetHashCode()} {Thread.CurrentThread.ManagedThreadId} {query.RawQuery}");
+                Logger.WoxInfo($"cancel init {_updateSource.Token.GetHashCode()} {Thread.CurrentThread.ManagedThreadId} {query.RawQuery}");
                 _updateSource.Dispose();
             }
             var source = new CancellationTokenSource();
