@@ -79,7 +79,7 @@ namespace Wox.Plugin.Program
                     }
                 }
             });
-            Logger.WoxInfo($"win32 for {token} done");
+            Logger.WoxInfo($"win32 for {query.RawQuery} done");
             if (token.IsCancellationRequested) { return new List<Result>(); }
             Parallel.ForEach(_uwps, (program, state) =>
             {
@@ -94,10 +94,11 @@ namespace Wox.Plugin.Program
                     }
                 }
             });
-            Logger.WoxInfo($"uwp for {token} done");
+            Logger.WoxInfo($"uwp for {query.RawQuery} done");
             if (token.IsCancellationRequested) { return new List<Result>(); }
-            OrderedParallelQuery<Result> sorted = resultRaw.AsParallel().OrderByDescending(r => r.Score);
-            Logger.WoxInfo($"sort for {token} done");
+            Logger.WoxInfo($"sorting for {query.RawQuery}, count {resultRaw.Count}");
+            OrderedParallelQuery <Result> sorted = resultRaw.AsParallel().WithCancellation(token).OrderByDescending(r => r.Score);
+            Logger.WoxInfo($"sort for {query.RawQuery} done");
             List<Result> results = new List<Result>();
             foreach (Result r in sorted)
             {
@@ -122,7 +123,7 @@ namespace Wox.Plugin.Program
                     break;
                 }
             }
-            Logger.WoxInfo($"filter for {token} done");
+            Logger.WoxInfo($"filter for {query.RawQuery} done");
             return results;
         }
 
